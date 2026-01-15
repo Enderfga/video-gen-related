@@ -1,0 +1,12 @@
+[submodule "FastVideo"]
+	path = FastVideo
+	url = https://github.com/hao-ai-lab/FastVideo.git
+[submodule "lightx2v"]
+	path = lightx2v
+	url = https://github.com/Enderfga/LightX2V.git
+[submodule "rcm"]
+	path = rcm
+	url = https://github.com/NVlabs/rcm.git
+[submodule "realtime-video"]
+	path = realtime-video
+	url = https://github.com/krea-ai/realtime-video.git

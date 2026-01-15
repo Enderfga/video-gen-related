@@ -1,0 +1,33 @@
+# Weight files
+*.pt
+*.pth
+*.safetensors
+*.ckpt
+*.bin
+
+# Weight folders
+CausalWan2.2-I2V/
+CausVid/
+
+# Output folders
+outputs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+
+# System
+.DS_Store
+*.log
+
+# Claude
+.claude/
