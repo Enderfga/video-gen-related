@@ -36,7 +36,7 @@ OUTPUT_PATH = "/raid/fga/related/outputs/rcm_4step"
 # =========================
 
 # Model paths
-DIT_PATH = "/raid/fga/related/rCM_Wan2.1_T2V_14B_480p.pt"
+DIT_PATH = "/raid/fga/related/rCM_Wan2.1_T2V_1.3B_480p.pt"
 VAE_PATH = "/raid/fga/related/CausVid/Wan2.1_VAE.pth"
 TEXT_ENCODER_PATH = "/raid/fga/related/CausVid/models_t5_umt5-xxl-enc-bf16.pth"
 
@@ -57,6 +57,19 @@ WAN2PT1_14B_T2V: LazyDict = L(WanModel)(
     text_len=512,
 )
 
+WAN2PT1_1PT3B_T2V: LazyDict = L(WanModel)(
+    dim=1536,
+    eps=1e-06,
+    ffn_dim=8960,
+    freq_dim=256,
+    in_dim=16,
+    model_type="t2v",
+    num_heads=12,
+    num_layers=30,
+    out_dim=16,
+    text_len=512,
+)
+
 tensor_kwargs = {"device": "cuda", "dtype": torch.bfloat16}
 
 os.makedirs(OUTPUT_PATH, exist_ok=True)
@@ -66,7 +79,7 @@ def main():
     # Load model
     log.info(f"Loading DiT from {DIT_PATH}")
     with init_weights_on_device():
-        net = instantiate(WAN2PT1_14B_T2V).eval()
+        net = instantiate(WAN2PT1_1PT3B_T2V).eval()
 
     state_dict = load_state_dict(DIT_PATH)
     prefix_to_load = "net."
