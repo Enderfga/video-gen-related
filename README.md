@@ -25,6 +25,10 @@ cd video-gen-related
 git submodule update --init --recursive
 ```
 
+下载权重
+```bash
+wget https://huggingface.co/worstcoder/rcm-Wan/resolve/main/rCM_Wan2.1_T2V_14B_480p.pt
+```
 ### 2. 创建环境
 
 需要 3 个 conda 环境：
