@@ -22,29 +22,29 @@ import os
 import sys
 from pathlib import Path
 
-CONDA_PATH = "/home/cloud-user/fga/miniconda3"
+CONDA_PATH = "/root/FGA/miniconda3"
 
 SCRIPTS = {
     "fastvideo": {
-        "script": "/raid/fga/related/infer_fastvideo.py",
+        "script": "/root/data/video-gen-related/infer_fastvideo.py",
         "gpu": 0,
         "name": "FastVideo (8-step)",
         "env": "fastvideo",
     },
-    "rcm": {
-        "script": "/raid/fga/related/infer_rcm.py",
-        "gpu": 1,
-        "name": "rCM (4-step)",
-        "env": "longlive",  # rcm needs longlive for flash_attn
-    },
+    # "rcm": {
+    #     "script": "/root/data/video-gen-related/infer_rcm.py",
+    #     "gpu": 1,
+    #     "name": "rCM (4-step)",
+    #     "env": "longlive",  # rcm needs longlive for flash_attn
+    # },
     "krea": {
-        "script": "/raid/fga/related/infer_krea.py",
+        "script": "/root/data/video-gen-related/infer_krea.py",
         "gpu": 2,
         "name": "Krea (4-step)",
         "env": "fastvideo",
     },
     "lightx2v": {
-        "script": "/raid/fga/related/infer_lightx2v.py",
+        "script": "/root/data/video-gen-related/infer_lightx2v.py",
         "gpu": 3,
         "name": "LightX2V (9-step)",
         "env": "lightx2v",
@@ -60,7 +60,7 @@ def run_single(name: str):
     env = config["env"]
 
     print(f"[{config['name']}] Starting on GPU {gpu} with env '{env}'...")
-    log_file = Path(f"/raid/fga/related/outputs/{name}.log")
+    log_file = Path(f"/root/data/video-gen-related/outputs/{name}.log")
     log_file.parent.mkdir(parents=True, exist_ok=True)
 
     # Use bash to activate conda and run script

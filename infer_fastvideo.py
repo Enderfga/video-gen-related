@@ -6,7 +6,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, "/raid/fga/related/FastVideo")
+sys.path.insert(0, "/root/data/video-gen-related/FastVideo")
 
 from fastvideo import VideoGenerator, SamplingParam
 from fastvideo.configs.pipelines.wan import SelfForcingWan2_2_T2V480PConfig
@@ -17,15 +17,15 @@ WIDTH = 832
 HEIGHT = 480
 SEEDS = [42, 1]
 NEGATIVE_PROMPT = "镜头晃动，色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
-PROMPT_FILE = "/raid/fga/related/prompt.json"
-OUTPUT_PATH = "/raid/fga/related/outputs/fastvideo_8step"
+PROMPT_FILE = "/root/data/video-gen-related/prompt.json"
+OUTPUT_PATH = "/root/data/video-gen-related/outputs/fastvideo_8step"
 # =========================
 
 os.makedirs(OUTPUT_PATH, exist_ok=True)
 
 
 def main():
-    model_id = "FastVideo/SFWan2.2-I2V-A14B-Preview-Diffusers"
+    model_id = "/root/data/video-gen-related/CausalWan2.2-I2V-A14B-Preview-Diffusers"
     pipeline_config = SelfForcingWan2_2_T2V480PConfig.from_pretrained(model_id)
 
     generator = VideoGenerator.from_pretrained(

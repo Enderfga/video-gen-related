@@ -9,9 +9,9 @@ import time
 from pathlib import Path
 
 # Set MODEL_FOLDER before imports
-os.environ["MODEL_FOLDER"] = "/raid/fga/LongLive/wan_models"
-os.chdir("/raid/fga/related/realtime-video")
-sys.path.insert(0, "/raid/fga/related/realtime-video")
+os.environ["MODEL_FOLDER"] = "/root/data/video-gen-related"
+os.chdir("/root/data/video-gen-related/realtime-video")
+sys.path.insert(0, "/root/data/video-gen-related/realtime-video")
 
 import torch
 from safetensors.torch import load_file as safe_load_file
@@ -56,8 +56,8 @@ WIDTH = 832
 HEIGHT = 480
 SEEDS = [0, 1]
 NEGATIVE_PROMPT = "镜头晃动，色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
-PROMPT_FILE = "/raid/fga/related/prompt.json"
-OUTPUT_PATH = "/raid/fga/related/outputs/krea_4step"
+PROMPT_FILE = "/root/data/video-gen-related/eval_caption_t2v_paper.json"
+OUTPUT_PATH = "/root/data/video-gen-related/outputs/krea_4step"
 # =========================
 
 # Krea specific: num_blocks to get ~81 frames (9 blocks * 9 frames per block)
@@ -80,7 +80,7 @@ def save_video_direct(pixels: torch.Tensor, output_path: Path, fps: int = 16):
 
 
 def main():
-    config_path = "/raid/fga/related/realtime-video/configs/self_forcing_server_14b.yaml"
+    config_path = "/root/data/video-gen-related/realtime-video/configs/self_forcing_server_14b.yaml"
 
     print("Loading models...")
     config = load_merge_config(config_path)

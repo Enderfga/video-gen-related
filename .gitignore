@@ -7,7 +7,9 @@
 
 # Weight folders
 CausalWan2.2-I2V/
+CausalWan2.2-I2V-A14B-Preview-Diffusers/
 CausVid/
+Wan2.1-T2V-*/
 
 # Output folders
 outputs/
