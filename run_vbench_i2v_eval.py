@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 """
-VBench 8-GPU 并行评估脚本
+VBench I2V 8-GPU 并行评估脚本
 
 用法:
-    torchrun --nproc_per_node=8 run_vbench.py --video_dir /path/to/videos
+    torchrun --nproc_per_node=8 run_vbench_i2v_eval.py --video_dir /path/to/videos
 
 参数:
     --video_dir: 视频所在目录 (mp4文件直接放在这个目录下)
     --output_dir: 输出目录 (默认为 video_dir/vbench_output)
-    --vbench_info: VBench 元信息 JSON 文件路径
 """
 
 import argparse
@@ -19,25 +18,26 @@ import torch.distributed as dist
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='VBench 8-GPU 并行评估')
-    parser.add_argument('--video_dir', type=str, required=True,
+    parser = argparse.ArgumentParser(description='VBench I2V 8-GPU 并行评估')
+    parser.add_argument('--video_dir', type=str,
+                        default='/root/data/video-gen-related/outputs/vbench/fastvideo_i2v',
                         help='视频所在目录')
     parser.add_argument('--output_dir', type=str, default=None,
                         help='输出目录 (默认为 video_dir/vbench_output)')
     parser.add_argument('--vbench_info', type=str,
-                        default='/root/data/rcm/VBench_full_info.json',
-                        help='VBench 元信息 JSON 文件路径')
-    parser.add_argument('--cache_dir', type=str, default=None,
-                        help='VBench 缓存目录 (默认为 video_dir/vbench_cache)')
+                        default='/root/data/FAR-World/assets/data/meta/vbench/vbench2_i2v_full_info.json',
+                        help='VBench I2V 元信息 JSON 文件路径')
+    parser.add_argument('--cache_dir', type=str,
+                        default='/root/data/FAR-World/experiments/pretrained_models/vbench',
+                        help='VBench 缓存目录')
     return parser.parse_args()
 
 
-# 所有评估维度
+# I2V 评估维度
 DIMENSIONS = [
-    'subject_consistency', 'background_consistency', 'aesthetic_quality', 'imaging_quality',
-    'object_class', 'multiple_objects', 'color', 'spatial_relationship',
-    'scene', 'temporal_style', 'overall_consistency', 'human_action',
-    'temporal_flickering', 'motion_smoothness', 'dynamic_degree', 'appearance_style'
+    'camera_motion', 'i2v_subject', 'i2v_background',
+    'subject_consistency', 'motion_smoothness', 'background_consistency',
+    'dynamic_degree', 'aesthetic_quality', 'imaging_quality'
 ]
 
 # 归一化范围
@@ -50,6 +50,12 @@ METRICS_NORMALIZATION_RANGES = {
     'appearance_style': [0.0009, 0.2855],
     'temporal_style': [0.0, 0.364],
     'overall_consistency': [0.0, 0.364],
+    'i2v_subject': [0.1462, 1.0],
+    'i2v_background': [0.2615, 1.0],
+    'dynamic_degree': [0.0, 1.0],
+    'aesthetic_quality': [0.0, 1.0],
+    'imaging_quality': [0.0, 1.0],
+    'camera_motion': [0.0, 1.0],
 }
 
 
@@ -67,13 +73,13 @@ def main():
     # 设置目录
     video_dir = args.video_dir
     output_dir = args.output_dir or os.path.join(video_dir, 'vbench_output')
-    cache_dir = args.cache_dir or os.path.join(video_dir, 'vbench_cache')
+    cache_dir = args.cache_dir
     vbench_info = args.vbench_info
 
     # 设置缓存目录
     os.environ['VBENCH_CACHE_DIR'] = cache_dir
 
-    from vbench import VBench
+    from vbench2_beta_i2v import VBenchI2V
     from vbench.distributed import dist_init, get_rank, get_world_size, barrier
 
     # 初始化分布式
@@ -84,9 +90,11 @@ def main():
 
     if rank == 0:
         os.makedirs(output_dir, exist_ok=True)
+        video_count = len([f for f in os.listdir(video_dir) if f.endswith('.mp4')])
         print(f"=" * 60)
-        print(f"VBench 评估 - {world_size} GPU 并行")
+        print(f"VBench I2V 评估 - {world_size} GPU 并行")
         print(f"视频目录: {video_dir}")
+        print(f"视频数量: {video_count}")
         print(f"输出目录: {output_dir}")
         print(f"缓存目录: {cache_dir}")
         print(f"评估维度: {len(DIMENSIONS)} 个")
@@ -94,8 +102,8 @@ def main():
 
     barrier()
 
-    # 初始化 VBench
-    evaluator = VBench(device, vbench_info, output_dir)
+    # 初始化 VBench I2V (位置参数: device, full_json_dir, output_path)
+    evaluator = VBenchI2V(device, vbench_info, output_dir)
 
     # 收集所有评估结果
     eval_info_dict = {}
@@ -118,6 +126,7 @@ def main():
                 videos_path=video_dir,
                 name=dimension,
                 dimension_list=[dimension],
+                resolution='480p',
                 local=True,
             )
             if rank == 0:
@@ -141,30 +150,23 @@ def main():
             norm(eval_info_dict['subject_consistency'], 'subject_consistency') +
             norm(eval_info_dict['background_consistency'], 'background_consistency') +
             norm(eval_info_dict['motion_smoothness'], 'motion_smoothness') +
-            norm(eval_info_dict['temporal_flickering'], 'temporal_flickering') +
             norm(eval_info_dict['dynamic_degree'], 'dynamic_degree') * 0.5 +
             norm(eval_info_dict['aesthetic_quality'], 'aesthetic_quality') +
             norm(eval_info_dict['imaging_quality'], 'imaging_quality')
-        ) / 6.5
+        ) / 5.5
 
-        # 计算 semantic_score
-        semantic_score = (
-            norm(eval_info_dict['object_class'], 'object_class') +
-            norm(eval_info_dict['multiple_objects'], 'multiple_objects') +
-            norm(eval_info_dict['human_action'], 'human_action') +
-            norm(eval_info_dict['color'], 'color') +
-            norm(eval_info_dict['spatial_relationship'], 'spatial_relationship') +
-            norm(eval_info_dict['scene'], 'scene') +
-            norm(eval_info_dict['appearance_style'], 'appearance_style') +
-            norm(eval_info_dict['temporal_style'], 'temporal_style') +
-            norm(eval_info_dict['overall_consistency'], 'overall_consistency')
-        ) / 9.0
+        # 计算 i2v_score
+        i2v_score = (
+            norm(eval_info_dict['i2v_subject'], 'i2v_subject') +
+            norm(eval_info_dict['i2v_background'], 'i2v_background') +
+            norm(eval_info_dict['camera_motion'], 'camera_motion') * 0.1
+        ) / 2.1
 
         # 计算 overall_score
-        overall_score = 0.2 * semantic_score + 0.8 * quality_score
+        overall_score = 0.5 * i2v_score + 0.5 * quality_score
 
         eval_info_dict['quality_score'] = quality_score
-        eval_info_dict['semantic_score'] = semantic_score
+        eval_info_dict['i2v_score'] = i2v_score
         eval_info_dict['overall_score'] = overall_score
 
         # 保存最终结果
@@ -174,14 +176,16 @@ def main():
 
         # 打印结果
         print("\n" + "=" * 60)
-        print("VBench 评估结果")
+        print("VBench I2V 评估结果")
         print("=" * 60)
-        print("\n各维度得分:")
+        print("\n各维度得分 (归一化):")
         for dim in DIMENSIONS:
-            print(f"  {dim}: {eval_info_dict[dim]:.4f}")
+            raw = eval_info_dict[dim]
+            normalized = norm(raw, dim)
+            print(f"  {dim:25s}: {normalized:.4f} (raw: {raw:.4f})")
         print("\n综合得分:")
         print(f"  Quality Score:  {quality_score:.4f}")
-        print(f"  Semantic Score: {semantic_score:.4f}")
+        print(f"  I2V Score:      {i2v_score:.4f}")
         print(f"  Overall Score:  {overall_score:.4f}")
         print("=" * 60)
         print(f"\n结果已保存到: {final_result_path}")

@@ -1,33 +1,26 @@
 #!/bin/bash
-# VBench evaluation for FastVideo, Krea, LightX2V
+# VBench 8卡并行评估脚本
 #
-# GPU allocation:
-# - GPU 0-3: FastVideo (4 workers)
-# - GPU 4-5: Krea (2 workers)
-# - GPU 6-7: LightX2V (2 workers)
+# 用法:
+#   bash run_vbench.sh /path/to/video_dir
 #
-# After generation: VBench scoring with rcm env, then upload to Enderfga/vbench
+# 示例:
+#   bash run_vbench.sh /root/data/rcm/output/vbench_results/step2
+#   bash run_vbench.sh /root/data/rcm/output/vbench_results/step4
 
-set -e
+# if [ -z "$1" ]; then
+#     echo "用法: bash run_vbench.sh <video_dir>"
+#     echo "示例: bash run_vbench.sh /root/data/rcm/output/vbench_results/step4"
+#     exit 1
+# fi
 
-echo "=========================================="
-echo "VBench Evaluation"
-echo "  FastVideo -> GPU 0-3 (4 workers)"
-echo "  Krea      -> GPU 4-5 (2 workers)"
-echo "  LightX2V  -> GPU 6-7 (2 workers)"
-echo "  Prompts: 946"
-echo "  Samples per prompt: 5"
-echo "  Total: 4730 videos per method"
-echo "=========================================="
-
-source ~/FGA/miniconda3/etc/profile.d/conda.sh
-conda activate fastvideo
-
-cd /root/data/video-gen-related
-
-python run_vbench.py
+VIDEO_DIR=/root/data/rcm/output/vbench_results/step2
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 
 echo "=========================================="
-echo "VBench complete! Results uploaded to:"
-echo "https://huggingface.co/datasets/Enderfga/vbench"
+echo "VBench 评估"
+echo "视频目录: $VIDEO_DIR"
 echo "=========================================="
+
+cd "$SCRIPT_DIR"
+torchrun --nproc_per_node=8 run_vbench.py --video_dir "$VIDEO_DIR"

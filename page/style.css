@@ -1,0 +1,450 @@
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    line-height: 1.7;
+    color: #333;
+    background-color: #fff;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Header */
+.header {
+    text-align: center;
+    padding: 60px 20px 40px;
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+    color: white;
+}
+
+.title {
+    font-size: 3.5rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    letter-spacing: -1px;
+}
+
+.subtitle {
+    font-size: 1.4rem;
+    font-weight: 300;
+    margin-bottom: 10px;
+    opacity: 0.95;
+}
+
+.authors {
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.author {
+    margin: 0 8px;
+    display: inline-block;
+}
+
+.affiliations {
+    font-size: 0.95rem;
+    opacity: 0.9;
+    margin-bottom: 5px;
+}
+
+.affiliations span {
+    margin: 0 15px;
+}
+
+.corresponding {
+    font-size: 0.85rem;
+    opacity: 0.8;
+    margin-bottom: 25px;
+}
+
+.links {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.3);
+}
+
+.btn:hover {
+    background: rgba(255,255,255,0.35);
+    transform: translateY(-2px);
+}
+
+/* Sections */
+.section {
+    padding: 50px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.section h2 {
+    font-size: 2rem;
+    margin-bottom: 25px;
+    color: #333;
+    position: relative;
+    display: inline-block;
+}
+
+.section h2::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 50px;
+    height: 3px;
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+    border-radius: 2px;
+}
+
+/* Abstract */
+.abstract p {
+    font-size: 1.05rem;
+    text-align: justify;
+    color: #555;
+}
+
+/* Method */
+.method .section-desc {
+    margin-bottom: 30px;
+    color: #666;
+}
+
+.method-figure {
+    text-align: center;
+}
+
+.method-img {
+    max-width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    background: #f5f5f5;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.caption {
+    margin-top: 15px;
+    font-size: 0.95rem;
+    color: #666;
+    font-style: italic;
+}
+
+/* Comparison Section */
+.comparison-block {
+    margin-bottom: 60px;
+    padding-bottom: 40px;
+    border-bottom: 1px dashed #ddd;
+}
+
+.comparison-block:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.comparison-block h3 {
+    font-size: 1.6rem;
+    color: #444;
+    margin-bottom: 10px;
+}
+
+.comparison-desc {
+    color: #666;
+    margin-bottom: 25px;
+}
+
+/* Sub-comparison titles with method tags */
+.sub-comparison-title {
+    font-size: 1.2rem;
+    color: #333;
+    margin: 35px 0 20px;
+    padding: 12px 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Method Tags */
+.method-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.method-tag.bidirectional {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    color: #1565c0;
+    border: 1px solid #90caf9;
+}
+
+.method-tag.causal {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+}
+
+.comparison-group {
+    margin-bottom: 40px;
+}
+
+.prompt-box {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 0.95rem;
+    color: #555;
+    border: 1px solid #e9ecef;
+}
+
+.prompt-box strong {
+    color: #333;
+}
+
+/* Video Grid */
+.video-grid {
+    display: grid;
+    gap: 20px;
+}
+
+.video-grid.three-col {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.video-item {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.video-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.video-item.highlight {
+    box-shadow: 0 4px 15px rgba(26, 115, 232, 0.3);
+    border: 2px solid #1a73e8;
+}
+
+.video-item.highlight:hover {
+    box-shadow: 0 8px 25px rgba(26, 115, 232, 0.4);
+}
+
+.video-item video {
+    width: 100%;
+    display: block;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: #1a1a1a;
+}
+
+.video-label {
+    text-align: center;
+    padding: 12px 10px;
+    background: #fff;
+    font-weight: 500;
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.video-item.highlight .video-label {
+    background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+    color: white;
+}
+
+/* I2V Container */
+.i2v-container {
+    display: flex;
+    gap: 20px;
+    align-items: stretch;
+}
+
+.input-image {
+    flex-shrink: 0;
+    width: 200px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+}
+
+.input-image img {
+    width: 100%;
+    flex: 1;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+    background: #f5f5f5;
+}
+
+.input-image .video-label {
+    padding: 12px 10px;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.i2v-container .video-grid {
+    flex: 1;
+}
+
+/* BibTeX */
+.bibtex-box {
+    position: relative;
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 25px;
+    overflow: hidden;
+}
+
+.bibtex-box pre {
+    margin: 0;
+    overflow-x: auto;
+}
+
+.bibtex-box code {
+    color: #d4d4d4;
+    font-family: 'SF Mono', Consolas, Monaco, monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.copy-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 8px 16px;
+    background: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.3s ease;
+}
+
+.copy-btn:hover {
+    background: #1557b0;
+}
+
+.copy-btn.copied {
+    background: #34a853;
+}
+
+/* Footer */
+.footer {
+    padding: 30px 0;
+    text-align: center;
+    background: #fafafa;
+    color: #666;
+    font-size: 0.9rem;
+    border-top: 1px solid #eee;
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+    .video-grid.three-col {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .i2v-container {
+        flex-direction: column;
+    }
+
+    .input-image {
+        width: 100%;
+        max-width: 300px;
+        margin: 0 auto 20px;
+    }
+
+    .title {
+        font-size: 2.5rem;
+    }
+
+    .subtitle {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .video-grid.three-col {
+        grid-template-columns: 1fr;
+    }
+
+    .header {
+        padding: 40px 15px 30px;
+    }
+
+    .title {
+        font-size: 2rem;
+    }
+
+    .section {
+        padding: 35px 0;
+    }
+
+    .section h2 {
+        font-size: 1.6rem;
+    }
+
+    .sub-comparison-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+}
+
+/* Placeholder styles for missing media */
+.video-item video:not([src]),
+.video-item video[src=""] {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+
+.method-img:not([src]),
+.method-img[src=""],
+.input-image img:not([src]),
+.input-image img[src=""] {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}

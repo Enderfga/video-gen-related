@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnyFlow - Project Page</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <h1 class="title">AnyFlow</h1>
+            <p class="subtitle">Post-Training Any-Step Video Diffusion Model with On-Policy Flow Map Distillation</p>
+
+            <div class="authors">
+                <span class="author">Yuchao Gu<sup>1,2</sup></span>
+                <span class="author">Guian Fang<sup>1</sup></span>
+                <span class="author">Yuxin Jiang<sup>1</sup></span>
+                <span class="author">Weijia Mao<sup>1</sup></span>
+                <span class="author">Han Cai<sup>2</sup></span>
+                <span class="author">Mike Zheng Shou<sup>1*</sup></span>
+            </div>
+
+            <div class="affiliations">
+                <span><sup>1</sup>Show Lab, National University of Singapore</span>
+                <span><sup>2</sup>NVIDIA</span>
+            </div>
+            <p class="corresponding">* Corresponding Author</p>
+
+            <div class="links">
+                <a href="#" class="btn"><i class="fas fa-file-pdf"></i> Paper</a>
+                <a href="#" class="btn"><i class="fab fa-github"></i> Code</a>
+                <a href="#" class="btn"><i class="fas fa-database"></i> Model</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Abstract -->
+    <section class="section abstract">
+        <div class="container">
+            <h2>Abstract</h2>
+            <p>
+                Recent state-of-the-art few-step video generators are primarily built upon consistency distillation (e.g., rCM for bidirectional models and self-forcing for causal models). Although effective, consistency distillation exhibits limited scalability with respect to inference-time budgets and often introduces detail artifacts in generated videos.
+            </p>
+            <p>
+                To address these limitations, we propose AnyFlow, the first any-step video post-training framework. AnyFlow complements base Flow Map training (e.g., MeanFlow) with on-policy distillation, ensuring broad data distribution coverage while simultaneously enhancing visual quality. Unlike the consistency backward simulation typically used in previous on-policy distillation methods, we exploit the merits of two-time variables to support any-step backward simulation. This approach significantly improves both quality and scalability with test-time compute.
+            </p>
+            <p>
+                We validated AnyFlow across a diverse range of video diffusion models—spanning bidirectional and causal architectures from 1.3B to 14B parameters, as well as text-to-video and image-to-video tasks. AnyFlow produces a series of models that surpass both their consistency-based counterparts and the original base models in quality. These results demonstrate the significant potential of Flow Map distillation for video generation.
+            </p>
+        </div>
+    </section>
+
+    <!-- Method -->
+    <section class="section method">
+        <div class="container">
+            <h2>Method</h2>
+            <div class="method-figure">
+                <img src="assets/method.png" alt="Method Overview" class="method-img">
+                <p class="caption">Overview of the AnyFlow pipeline. AnyFlow learns Flow Map from data and combines it with on-policy distillation for distribution matching.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bidirectional Comparison Section -->
+    <section class="section comparison">
+        <div class="container">
+            <h2>Bidirectional Video Diffusion Model Comparison</h2>
+
+            <!-- 1.3B Comparison -->
+            <div class="comparison-block">
+                <h3>1.3B Model Comparison</h3>
+                <p class="comparison-desc">Text-to-Video generation comparison at 1.3B parameter scale.</p>
+
+                <div class="comparison-group">
+                    <div class="prompt-box">
+                        <strong>Prompt:</strong> "A cat walking on the grass in the sunshine."
+                    </div>
+                    <div class="video-grid three-col">
+                        <div class="video-item">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/1.3b/comparison1_rcm.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">rCM</p>
+                        </div>
+                        <div class="video-item">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/1.3b/comparison1_selfforcing.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">Self-Forcing</p>
+                        </div>
+                        <div class="video-item highlight">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/1.3b/comparison1_ours.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">AnyFlow (Ours)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-group">
+                    <div class="prompt-box">
+                        <strong>Prompt:</strong> "A drone view of waves crashing against the shore."
+                    </div>
+                    <div class="video-grid three-col">
+                        <div class="video-item">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/1.3b/comparison2_rcm.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">rCM</p>
+                        </div>
+                        <div class="video-item">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/1.3b/comparison2_selfforcing.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">Self-Forcing</p>
+                        </div>
+                        <div class="video-item highlight">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/1.3b/comparison2_ours.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">AnyFlow (Ours)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 14B T2V Bidirectional -->
+            <div class="comparison-block">
+                <h3>14B Text-to-Video Comparison</h3>
+                <p class="comparison-desc">Text-to-Video generation comparison at 14B parameter scale.</p>
+
+                <h4 class="sub-comparison-title">
+                    <span class="method-tag bidirectional">Bidirectional</span>
+                    vs. rCM & Wan Base Model
+                </h4>
+                <div class="comparison-group">
+                    <div class="prompt-box">
+                        <strong>Prompt:</strong> "A beautiful sunset over the ocean with golden clouds."
+                    </div>
+                    <div class="video-grid three-col">
+                        <div class="video-item">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/14b_t2v/comparison1_rcm.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">rCM</p>
+                        </div>
+                        <div class="video-item">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/14b_t2v/comparison1_wan.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">Wan Base</p>
+                        </div>
+                        <div class="video-item highlight">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/14b_t2v/comparison1_ours.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">AnyFlow (Ours)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-group">
+                    <div class="prompt-box">
+                        <strong>Prompt:</strong> "A person riding a bicycle through a city street."
+                    </div>
+                    <div class="video-grid three-col">
+                        <div class="video-item">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/14b_t2v/comparison2_rcm.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">rCM</p>
+                        </div>
+                        <div class="video-item">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/14b_t2v/comparison2_wan.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">Wan Base</p>
+                        </div>
+                        <div class="video-item highlight">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/14b_t2v/comparison2_ours.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">AnyFlow (Ours)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 14B I2V Bidirectional -->
+            <div class="comparison-block">
+                <h3>14B Image-to-Video Comparison</h3>
+                <p class="comparison-desc">Image-to-Video generation comparison at 14B parameter scale.</p>
+
+                <h4 class="sub-comparison-title">
+                    <span class="method-tag bidirectional">Bidirectional</span>
+                    vs. rCM & Wan Base Model
+                </h4>
+                <div class="comparison-group">
+                    <div class="prompt-box">
+                        <strong>Prompt:</strong> "Make the flowers bloom and sway in the wind."
+                    </div>
+                    <div class="i2v-container">
+                        <div class="input-image">
+                            <img src="images/i2v/input1.png" alt="Input Image">
+                            <p class="video-label">Input Image</p>
+                        </div>
+                        <div class="video-grid three-col">
+                            <div class="video-item">
+                                <video controls autoplay muted loop playsinline>
+                                    <source src="videos/14b_i2v/comparison1_rcm.mp4" type="video/mp4">
+                                </video>
+                                <p class="video-label">rCM</p>
+                            </div>
+                            <div class="video-item">
+                                <video controls autoplay muted loop playsinline>
+                                    <source src="videos/14b_i2v/comparison1_wan.mp4" type="video/mp4">
+                                </video>
+                                <p class="video-label">Wan Base</p>
+                            </div>
+                            <div class="video-item highlight">
+                                <video controls autoplay muted loop playsinline>
+                                    <source src="videos/14b_i2v/comparison1_ours.mp4" type="video/mp4">
+                                </video>
+                                <p class="video-label">AnyFlow (Ours)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-group">
+                    <div class="prompt-box">
+                        <strong>Prompt:</strong> "The bird takes flight from the branch."
+                    </div>
+                    <div class="i2v-container">
+                        <div class="input-image">
+                            <img src="images/i2v/input2.png" alt="Input Image">
+                            <p class="video-label">Input Image</p>
+                        </div>
+                        <div class="video-grid three-col">
+                            <div class="video-item">
+                                <video controls autoplay muted loop playsinline>
+                                    <source src="videos/14b_i2v/comparison2_rcm.mp4" type="video/mp4">
+                                </video>
+                                <p class="video-label">rCM</p>
+                            </div>
+                            <div class="video-item">
+                                <video controls autoplay muted loop playsinline>
+                                    <source src="videos/14b_i2v/comparison2_wan.mp4" type="video/mp4">
+                                </video>
+                                <p class="video-label">Wan Base</p>
+                            </div>
+                            <div class="video-item highlight">
+                                <video controls autoplay muted loop playsinline>
+                                    <source src="videos/14b_i2v/comparison2_ours.mp4" type="video/mp4">
+                                </video>
+                                <p class="video-label">AnyFlow (Ours)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Causal Comparison Section -->
+    <section class="section comparison">
+        <div class="container">
+            <h2>Causal Video Diffusion Model Comparison</h2>
+
+            <!-- 14B T2V Causal -->
+            <div class="comparison-block">
+                <h3>14B Text-to-Video Comparison</h3>
+                <p class="comparison-desc">Text-to-Video generation comparison at 14B parameter scale.</p>
+
+                <h4 class="sub-comparison-title">
+                    <span class="method-tag causal">Causal</span>
+                    vs. FastVideo & LightX2V
+                </h4>
+                <div class="comparison-group">
+                    <div class="prompt-box">
+                        <strong>Prompt:</strong> "A futuristic city with flying cars and neon lights."
+                    </div>
+                    <div class="video-grid three-col">
+                        <div class="video-item">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/14b_t2v/comparison3_fastvideo.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">FastVideo</p>
+                        </div>
+                        <div class="video-item">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/14b_t2v/comparison3_lightx2v.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">LightX2V</p>
+                        </div>
+                        <div class="video-item highlight">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/14b_t2v/comparison3_ours.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">AnyFlow (Ours)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-group">
+                    <div class="prompt-box">
+                        <strong>Prompt:</strong> "A dancer performing ballet in an elegant theater."
+                    </div>
+                    <div class="video-grid three-col">
+                        <div class="video-item">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/14b_t2v/comparison4_fastvideo.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">FastVideo</p>
+                        </div>
+                        <div class="video-item">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/14b_t2v/comparison4_lightx2v.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">LightX2V</p>
+                        </div>
+                        <div class="video-item highlight">
+                            <video controls autoplay muted loop playsinline>
+                                <source src="videos/14b_t2v/comparison4_ours.mp4" type="video/mp4">
+                            </video>
+                            <p class="video-label">AnyFlow (Ours)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 14B I2V Causal -->
+            <div class="comparison-block">
+                <h3>14B Image-to-Video Comparison</h3>
+                <p class="comparison-desc">Image-to-Video generation comparison at 14B parameter scale.</p>
+
+                <h4 class="sub-comparison-title">
+                    <span class="method-tag causal">Causal</span>
+                    vs. FastVideo & LightX2V
+                </h4>
+                <div class="comparison-group">
+                    <div class="prompt-box">
+                        <strong>Prompt:</strong> "The waterfall flows down with splashing water."
+                    </div>
+                    <div class="i2v-container">
+                        <div class="input-image">
+                            <img src="images/i2v/input3.png" alt="Input Image">
+                            <p class="video-label">Input Image</p>
+                        </div>
+                        <div class="video-grid three-col">
+                            <div class="video-item">
+                                <video controls autoplay muted loop playsinline>
+                                    <source src="videos/14b_i2v/comparison3_fastvideo.mp4" type="video/mp4">
+                                </video>
+                                <p class="video-label">FastVideo</p>
+                            </div>
+                            <div class="video-item">
+                                <video controls autoplay muted loop playsinline>
+                                    <source src="videos/14b_i2v/comparison3_lightx2v.mp4" type="video/mp4">
+                                </video>
+                                <p class="video-label">LightX2V</p>
+                            </div>
+                            <div class="video-item highlight">
+                                <video controls autoplay muted loop playsinline>
+                                    <source src="videos/14b_i2v/comparison3_ours.mp4" type="video/mp4">
+                                </video>
+                                <p class="video-label">AnyFlow (Ours)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-group">
+                    <div class="prompt-box">
+                        <strong>Prompt:</strong> "The car drives down the road."
+                    </div>
+                    <div class="i2v-container">
+                        <div class="input-image">
+                            <img src="images/i2v/input4.png" alt="Input Image">
+                            <p class="video-label">Input Image</p>
+                        </div>
+                        <div class="video-grid three-col">
+                            <div class="video-item">
+                                <video controls autoplay muted loop playsinline>
+                                    <source src="videos/14b_i2v/comparison4_fastvideo.mp4" type="video/mp4">
+                                </video>
+                                <p class="video-label">FastVideo</p>
+                            </div>
+                            <div class="video-item">
+                                <video controls autoplay muted loop playsinline>
+                                    <source src="videos/14b_i2v/comparison4_lightx2v.mp4" type="video/mp4">
+                                </video>
+                                <p class="video-label">LightX2V</p>
+                            </div>
+                            <div class="video-item highlight">
+                                <video controls autoplay muted loop playsinline>
+                                    <source src="videos/14b_i2v/comparison4_ours.mp4" type="video/mp4">
+                                </video>
+                                <p class="video-label">AnyFlow (Ours)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- BibTeX -->
+    <section class="section bibtex">
+        <div class="container">
+            <h2>BibTeX</h2>
+            <div class="bibtex-box">
+                <button class="copy-btn" onclick="copyBibtex()">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+                <pre><code>@article{gu2025anyflow,
+  title={AnyFlow: Post-Training Any-Step Video Diffusion Model with On-Policy Flow Map Distillation},
+  author={Gu, Yuchao and Fang, Guian and Jiang, Yuxin and Mao, Weijia and Cai, Han and Shou, Mike Zheng},
+  journal={arXiv preprint arXiv:2025.xxxxx},
+  year={2025}
+}</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>AnyFlow Project Page | Show Lab, National University of Singapore</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
