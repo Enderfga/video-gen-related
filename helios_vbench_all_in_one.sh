@@ -2,30 +2,25 @@
 ###############################################################################
 # Helios VBench All-in-One Script
 #
-# 一键完成: 环境安装 -> 权重下载 -> T2V生成 -> I2V生成
+# 一键完成: 环境安装 -> 权重下载 -> I2V图片下载 -> T2V生成 -> I2V生成
 # 8卡并行生成, 每个worker独立运行
 #
 # 用法:
 #   bash helios_vbench_all_in_one.sh
-#
-# 需要的文件 (会自动下载):
-#   - Helios-Distilled 权重
-#   - VBench_aug_full_info.json (T2V prompts)
-#   - vbench2_i2v_aug_full_info.json (I2V prompts + images)
 ###############################################################################
 set -e
 
 # ===================== CONFIG =====================
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
-CONDA_PATH="${CONDA_PATH:-$(conda info --base)}"
-ENV_NAME="helios"
+VENV_DIR="${BASE_DIR}/.venv_helios"
 MODEL_ID="BestWishYsh/Helios-Distilled"
 MODEL_DIR="${BASE_DIR}/Helios-Distilled"
 
-# VBench paths
+# VBench data
 VBENCH_T2V_JSON="${BASE_DIR}/VBench_aug_full_info.json"
-VBENCH_I2V_JSON="${BASE_DIR}/vbench2_i2v_aug_full_info.json"
-I2V_IMAGE_DIR="${BASE_DIR}/datasets/vbench_i2v/crop"
+VBENCH_I2V_JSON="${BASE_DIR}/vbench2_i2v_full_info.json"
+I2V_DATA_DIR="${BASE_DIR}/datasets/vbench_i2v/data"
+I2V_IMAGE_DIR="${I2V_DATA_DIR}/crop"
 
 # Output
 OUTPUT_BASE="${BASE_DIR}/outputs/vbench"
@@ -40,28 +35,24 @@ echo "=============================================="
 echo " Helios VBench All-in-One"
 echo "=============================================="
 echo "BASE_DIR: ${BASE_DIR}"
-echo "CONDA:   ${CONDA_PATH}"
 echo ""
 
-# ===================== STEP 1: Environment =====================
-echo "[Step 1/5] Setting up conda environment..."
+# ===================== STEP 1: Python venv =====================
+echo "[Step 1/6] Setting up Python virtual environment..."
 
-if conda env list | grep -q "^${ENV_NAME} "; then
-    echo "  -> Environment '${ENV_NAME}' exists, checking packages..."
-else
-    echo "  -> Creating environment '${ENV_NAME}'..."
-    conda create -n ${ENV_NAME} python=3.11 -y
+if [ ! -f "${VENV_DIR}/bin/python" ]; then
+    echo "  -> Creating venv at ${VENV_DIR}..."
+    python3 -m venv "${VENV_DIR}"
 fi
 
-# Activate
-source "${CONDA_PATH}/bin/activate" ${ENV_NAME}
+source "${VENV_DIR}/bin/activate"
 
-# Install deps
 echo "  -> Installing packages..."
-pip install torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu126 -q 2>/dev/null || true
-pip install "git+https://github.com/huggingface/diffusers.git" -q 2>/dev/null || true
-pip install transformers accelerate safetensors einops ftfy imageio imageio-ffmpeg -q 2>/dev/null || true
-pip install vbench -q 2>/dev/null || true
+pip install -q --upgrade pip
+pip install -q torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu126 2>/dev/null || true
+pip install -q "git+https://github.com/huggingface/diffusers.git" 2>/dev/null || true
+pip install -q transformers accelerate safetensors einops ftfy imageio imageio-ffmpeg 2>/dev/null || true
+pip install -q vbench gdown huggingface-hub 2>/dev/null || true
 
 echo "  -> Verifying..."
 python -c "from diffusers import HeliosPyramidPipeline; print('  -> diffusers OK')"
@@ -69,38 +60,74 @@ python -c "import vbench; print('  -> vbench OK')"
 echo "[Step 1] Done."
 echo ""
 
-# ===================== STEP 2: Download Weights =====================
-echo "[Step 2/5] Downloading model weights..."
+# ===================== STEP 2: Download Model Weights =====================
+echo "[Step 2/6] Downloading Helios-Distilled weights..."
 
 if [ -f "${MODEL_DIR}/model_index.json" ]; then
-    echo "  -> Helios-Distilled already downloaded."
+    echo "  -> Already downloaded."
 else
-    echo "  -> Downloading Helios-Distilled (~60GB)..."
+    echo "  -> Downloading (~60GB)..."
     huggingface-cli download ${MODEL_ID} --local-dir "${MODEL_DIR}"
-fi
-
-# Download VBench metadata if not present
-if [ ! -f "${VBENCH_T2V_JSON}" ]; then
-    echo "  -> VBench_aug_full_info.json not found, please provide it."
-    exit 1
 fi
 
 echo "[Step 2] Done."
 echo ""
 
-# ===================== STEP 3: Generate T2V Worker Script =====================
-echo "[Step 3/5] Generating T2V videos (8 GPU workers)..."
+# ===================== STEP 3: Download VBench I2V Data =====================
+echo "[Step 3/6] Preparing VBench I2V data..."
+
+# T2V json should be in repo
+if [ ! -f "${VBENCH_T2V_JSON}" ]; then
+    echo "  -> ERROR: ${VBENCH_T2V_JSON} not found!"
+    exit 1
+fi
+echo "  -> T2V json: OK ($(python3 -c "import json; print(len(json.load(open('${VBENCH_T2V_JSON}'))))" ) prompts)"
+
+# I2V json should be in repo
+if [ ! -f "${VBENCH_I2V_JSON}" ]; then
+    echo "  -> ERROR: ${VBENCH_I2V_JSON} not found!"
+    exit 1
+fi
+echo "  -> I2V json: OK ($(python3 -c "import json; print(len(json.load(open('${VBENCH_I2V_JSON}'))))" ) prompts)"
+
+# Download I2V images if not present
+if [ -d "${I2V_IMAGE_DIR}" ] && [ "$(ls -A ${I2V_IMAGE_DIR} 2>/dev/null)" ]; then
+    echo "  -> I2V images: already downloaded."
+else
+    echo "  -> Downloading I2V images from Google Drive..."
+    mkdir -p "${I2V_DATA_DIR}"
+
+    # Download crop.zip (pre-cropped images in multiple aspect ratios)
+    gdown --id 1Y_JnYnyJ3a6QhiranoX0MQVZFcTDPekZ --output "${I2V_DATA_DIR}/crop.zip"
+    unzip -q "${I2V_DATA_DIR}/crop.zip" -d "${I2V_DATA_DIR}"
+    rm -f "${I2V_DATA_DIR}/crop.zip"
+
+    echo "  -> I2V images downloaded."
+fi
+
+# Determine best aspect ratio directory for Helios (640x384 ≈ 5:3)
+# Available: 1-1, 7-4, 8-5, 16-9. Closest to 5:3 is 8-5 (1.6 vs 1.67)
+if [ -d "${I2V_IMAGE_DIR}/8-5" ]; then
+    I2V_CROP_DIR="${I2V_IMAGE_DIR}/8-5"
+elif [ -d "${I2V_IMAGE_DIR}/7-4" ]; then
+    I2V_CROP_DIR="${I2V_IMAGE_DIR}/7-4"
+else
+    I2V_CROP_DIR="${I2V_IMAGE_DIR}"
+fi
+echo "  -> Using crop dir: ${I2V_CROP_DIR}"
+
+echo "[Step 3] Done."
+echo ""
+
+# ===================== STEP 4: T2V Generation =====================
+echo "[Step 4/6] Generating T2V videos (8 GPU workers)..."
 
 mkdir -p "${T2V_OUTPUT}"
 
 cat > "${BASE_DIR}/_helios_t2v_worker.py" << 'WORKER_EOF'
-"""Helios T2V VBench worker - generates videos for a subset of prompts."""
-import json
-import os
-import sys
-import argparse
+"""Helios T2V VBench worker."""
+import json, os, argparse
 from pathlib import Path
-
 import torch
 from diffusers import AutoModel, HeliosPyramidPipeline
 from diffusers.utils import export_to_video
@@ -113,7 +140,6 @@ NEGATIVE_PROMPT = (
     "three legs, many people in the background, walking backwards"
 )
 
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--worker_id", type=int, required=True)
@@ -125,32 +151,19 @@ def main():
     args = parser.parse_args()
 
     torch.set_grad_enabled(False)
-
-    # Load prompts
     with open(args.vbench_json) as f:
         vbench_data = json.load(f)
 
-    num_prompts = len(vbench_data)
-    total_samples = num_prompts * args.num_samples
-
-    # Build sample list: (prompt_idx, sample_idx)
-    all_indices = []
-    for p_idx in range(num_prompts):
-        for s_idx in range(args.num_samples):
-            all_indices.append((p_idx, s_idx))
-
-    # Rotate for load balancing
+    total_samples = len(vbench_data) * args.num_samples
+    all_indices = [(p, s) for p in range(len(vbench_data)) for s in range(args.num_samples)]
     offset = args.worker_id * (total_samples // args.num_workers)
     all_indices = all_indices[offset:] + all_indices[:offset]
 
-    # Load pipeline
     print(f"[Worker {args.worker_id}] Loading Helios-Distilled...")
     vae = AutoModel.from_pretrained(args.model_dir, subfolder="vae", torch_dtype=torch.float32)
-    pipeline = HeliosPyramidPipeline.from_pretrained(
-        args.model_dir, vae=vae, torch_dtype=torch.bfloat16
-    )
+    pipeline = HeliosPyramidPipeline.from_pretrained(args.model_dir, vae=vae, torch_dtype=torch.bfloat16)
     pipeline.to("cuda")
-    print(f"[Worker {args.worker_id}] Pipeline loaded. Processing {total_samples} samples...")
+    print(f"[Worker {args.worker_id}] Loaded. {total_samples} total samples.")
 
     os.makedirs(args.output_dir, exist_ok=True)
     generated = 0
@@ -159,24 +172,18 @@ def main():
         item = vbench_data[p_idx]
         prompt_en = item["prompt_en"]
         aug_prompt = item.get("aug_prompt_en", prompt_en)
-        target_name = f"{prompt_en}-{s_idx}.mp4"
-        target_path = Path(args.output_dir) / target_name
+        target_path = Path(args.output_dir) / f"{prompt_en}-{s_idx}.mp4"
         lock_path = Path(args.output_dir) / f".{prompt_en}-{s_idx}.lock"
 
-        # Skip if exists
         if target_path.exists():
             continue
-
-        # Lock file to prevent duplicate work
         try:
             lock_path.touch(exist_ok=False)
         except FileExistsError:
             continue
 
         try:
-            seed = s_idx * 1000 + p_idx
-            generator = torch.Generator(device="cuda").manual_seed(seed)
-
+            generator = torch.Generator(device="cuda").manual_seed(s_idx * 1000 + p_idx)
             output = pipeline(
                 prompt=aug_prompt,
                 negative_prompt=NEGATIVE_PROMPT,
@@ -188,69 +195,52 @@ def main():
                 is_amplify_first_chunk=True,
                 generator=generator,
             )
-
             export_to_video(output.frames[0], str(target_path), fps=24)
             generated += 1
-
             if generated % 10 == 0:
                 done = len([f for f in os.listdir(args.output_dir) if f.endswith('.mp4')])
-                print(f"[Worker {args.worker_id}] Generated {generated} (total {done}/{total_samples})")
+                print(f"[Worker {args.worker_id}] T2V {generated} done (total {done}/{total_samples})")
         except Exception as e:
             print(f"[Worker {args.worker_id}] Error: {e}")
         finally:
             lock_path.unlink(missing_ok=True)
 
-    print(f"[Worker {args.worker_id}] Done. Generated {generated} videos.")
-
+    print(f"[Worker {args.worker_id}] T2V finished. Generated {generated}.")
 
 if __name__ == "__main__":
     main()
 WORKER_EOF
 
-# Launch T2V workers
 echo "  -> Launching ${NUM_GPUS} T2V workers..."
 PIDS=()
 for gpu_id in $(seq 0 $((NUM_GPUS - 1))); do
     CUDA_VISIBLE_DEVICES=${gpu_id} python "${BASE_DIR}/_helios_t2v_worker.py" \
-        --worker_id ${gpu_id} \
-        --num_workers ${NUM_GPUS} \
-        --model_dir "${MODEL_DIR}" \
-        --vbench_json "${VBENCH_T2V_JSON}" \
-        --output_dir "${T2V_OUTPUT}" \
-        --num_samples ${NUM_SAMPLES} \
-        > "${OUTPUT_BASE}/helios_t2v_worker${gpu_id}.log" 2>&1 &
+        --worker_id ${gpu_id} --num_workers ${NUM_GPUS} \
+        --model_dir "${MODEL_DIR}" --vbench_json "${VBENCH_T2V_JSON}" \
+        --output_dir "${T2V_OUTPUT}" --num_samples ${NUM_SAMPLES} \
+        > "${OUTPUT_BASE}/helios_t2v_w${gpu_id}.log" 2>&1 &
     PIDS+=($!)
     echo "    GPU ${gpu_id}: PID $!"
 done
 
-echo "  -> Waiting for T2V generation to complete..."
+echo "  -> Waiting for T2V to complete..."
 FAIL=0
-for pid in "${PIDS[@]}"; do
-    wait $pid || FAIL=$((FAIL + 1))
-done
+for pid in "${PIDS[@]}"; do wait $pid || FAIL=$((FAIL + 1)); done
 
 T2V_COUNT=$(find "${T2V_OUTPUT}" -name "*.mp4" | wc -l)
-T2V_EXPECTED=$(python -c "import json; d=json.load(open('${VBENCH_T2V_JSON}')); print(len(d) * ${NUM_SAMPLES})")
-echo "[Step 3] T2V Done. ${T2V_COUNT}/${T2V_EXPECTED} videos. Failed workers: ${FAIL}"
+T2V_EXPECTED=$(python3 -c "import json; print(len(json.load(open('${VBENCH_T2V_JSON}'))) * ${NUM_SAMPLES})")
+echo "[Step 4] T2V Done. ${T2V_COUNT}/${T2V_EXPECTED} videos. Failed workers: ${FAIL}"
 echo ""
 
-# ===================== STEP 4: Generate I2V Worker Script =====================
-echo "[Step 4/5] Generating I2V videos (8 GPU workers)..."
-
-if [ ! -f "${VBENCH_I2V_JSON}" ]; then
-    echo "  -> WARNING: ${VBENCH_I2V_JSON} not found, skipping I2V."
-else
+# ===================== STEP 5: I2V Generation =====================
+echo "[Step 5/6] Generating I2V videos (8 GPU workers)..."
 
 mkdir -p "${I2V_OUTPUT}"
 
-cat > "${BASE_DIR}/_helios_i2v_worker.py" << 'WORKER_EOF'
-"""Helios I2V VBench worker - generates videos from images."""
-import json
-import os
-import sys
-import argparse
+cat > "${BASE_DIR}/_helios_i2v_worker.py" << WORKER_EOF
+"""Helios I2V VBench worker."""
+import json, os, argparse
 from pathlib import Path
-
 import torch
 from diffusers import AutoModel, HeliosPyramidPipeline
 from diffusers.utils import export_to_video, load_image
@@ -262,7 +252,7 @@ NEGATIVE_PROMPT = (
     "deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, "
     "three legs, many people in the background, walking backwards"
 )
-
+I2V_CROP_DIR = "${I2V_CROP_DIR}"
 
 def main():
     parser = argparse.ArgumentParser()
@@ -270,34 +260,24 @@ def main():
     parser.add_argument("--num_workers", type=int, default=8)
     parser.add_argument("--model_dir", type=str, required=True)
     parser.add_argument("--vbench_json", type=str, required=True)
-    parser.add_argument("--image_dir", type=str, required=True)
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--num_samples", type=int, default=5)
     args = parser.parse_args()
 
     torch.set_grad_enabled(False)
-
     with open(args.vbench_json) as f:
         vbench_data = json.load(f)
 
-    num_prompts = len(vbench_data)
-    total_samples = num_prompts * args.num_samples
-
-    all_indices = []
-    for p_idx in range(num_prompts):
-        for s_idx in range(args.num_samples):
-            all_indices.append((p_idx, s_idx))
-
+    total_samples = len(vbench_data) * args.num_samples
+    all_indices = [(p, s) for p in range(len(vbench_data)) for s in range(args.num_samples)]
     offset = args.worker_id * (total_samples // args.num_workers)
     all_indices = all_indices[offset:] + all_indices[:offset]
 
     print(f"[Worker {args.worker_id}] Loading Helios-Distilled for I2V...")
     vae = AutoModel.from_pretrained(args.model_dir, subfolder="vae", torch_dtype=torch.float32)
-    pipeline = HeliosPyramidPipeline.from_pretrained(
-        args.model_dir, vae=vae, torch_dtype=torch.bfloat16
-    )
+    pipeline = HeliosPyramidPipeline.from_pretrained(args.model_dir, vae=vae, torch_dtype=torch.bfloat16)
     pipeline.to("cuda")
-    print(f"[Worker {args.worker_id}] Pipeline loaded.")
+    print(f"[Worker {args.worker_id}] Loaded.")
 
     os.makedirs(args.output_dir, exist_ok=True)
     generated = 0
@@ -305,40 +285,32 @@ def main():
     for p_idx, s_idx in all_indices:
         item = vbench_data[p_idx]
         prompt_en = item["prompt_en"]
-        aug_prompt = item.get("aug_prompt_en", prompt_en)
         image_name = item.get("image_name", "")
-        target_name = f"{prompt_en}-{s_idx}.mp4"
-        target_path = Path(args.output_dir) / target_name
+        target_path = Path(args.output_dir) / f"{prompt_en}-{s_idx}.mp4"
         lock_path = Path(args.output_dir) / f".{prompt_en}-{s_idx}.lock"
 
         if target_path.exists():
             continue
-
         try:
             lock_path.touch(exist_ok=False)
         except FileExistsError:
             continue
 
         try:
-            # Find source image
-            image_path = os.path.join(args.image_dir, image_name)
-            if not os.path.exists(image_path):
-                # Try without subdirectory
-                for root, _, files in os.walk(args.image_dir):
-                    if image_name in files:
-                        image_path = os.path.join(root, image_name)
-                        break
-
-            if not os.path.exists(image_path):
-                print(f"[Worker {args.worker_id}] Image not found: {image_name}, skipping")
+            # Find image in crop directories
+            image_path = None
+            for root, _, files in os.walk(I2V_CROP_DIR):
+                if image_name in files:
+                    image_path = os.path.join(root, image_name)
+                    break
+            if image_path is None:
+                print(f"[Worker {args.worker_id}] Image not found: {image_name}, skip")
                 continue
 
             image = load_image(image_path).resize((640, 384))
-            seed = s_idx * 1000 + p_idx
-            generator = torch.Generator(device="cuda").manual_seed(seed)
-
+            generator = torch.Generator(device="cuda").manual_seed(s_idx * 1000 + p_idx)
             output = pipeline(
-                prompt=aug_prompt,
+                prompt=prompt_en,
                 negative_prompt=NEGATIVE_PROMPT,
                 image=image,
                 num_frames=132,
@@ -349,66 +321,62 @@ def main():
                 is_amplify_first_chunk=True,
                 generator=generator,
             )
-
             export_to_video(output.frames[0], str(target_path), fps=24)
             generated += 1
-
             if generated % 10 == 0:
                 done = len([f for f in os.listdir(args.output_dir) if f.endswith('.mp4')])
-                print(f"[Worker {args.worker_id}] I2V Generated {generated} (total {done}/{total_samples})")
+                print(f"[Worker {args.worker_id}] I2V {generated} done (total {done}/{total_samples})")
         except Exception as e:
             print(f"[Worker {args.worker_id}] Error on {prompt_en}: {e}")
         finally:
             lock_path.unlink(missing_ok=True)
 
-    print(f"[Worker {args.worker_id}] I2V Done. Generated {generated} videos.")
-
+    print(f"[Worker {args.worker_id}] I2V finished. Generated {generated}.")
 
 if __name__ == "__main__":
     main()
 WORKER_EOF
 
-# Launch I2V workers
 echo "  -> Launching ${NUM_GPUS} I2V workers..."
 PIDS=()
 for gpu_id in $(seq 0 $((NUM_GPUS - 1))); do
     CUDA_VISIBLE_DEVICES=${gpu_id} python "${BASE_DIR}/_helios_i2v_worker.py" \
-        --worker_id ${gpu_id} \
-        --num_workers ${NUM_GPUS} \
-        --model_dir "${MODEL_DIR}" \
-        --vbench_json "${VBENCH_I2V_JSON}" \
-        --image_dir "${I2V_IMAGE_DIR}" \
-        --output_dir "${I2V_OUTPUT}" \
-        --num_samples ${NUM_SAMPLES} \
-        > "${OUTPUT_BASE}/helios_i2v_worker${gpu_id}.log" 2>&1 &
+        --worker_id ${gpu_id} --num_workers ${NUM_GPUS} \
+        --model_dir "${MODEL_DIR}" --vbench_json "${VBENCH_I2V_JSON}" \
+        --output_dir "${I2V_OUTPUT}" --num_samples ${NUM_SAMPLES} \
+        > "${OUTPUT_BASE}/helios_i2v_w${gpu_id}.log" 2>&1 &
     PIDS+=($!)
     echo "    GPU ${gpu_id}: PID $!"
 done
 
-echo "  -> Waiting for I2V generation to complete..."
+echo "  -> Waiting for I2V to complete..."
 FAIL=0
-for pid in "${PIDS[@]}"; do
-    wait $pid || FAIL=$((FAIL + 1))
-done
+for pid in "${PIDS[@]}"; do wait $pid || FAIL=$((FAIL + 1)); done
 
 I2V_COUNT=$(find "${I2V_OUTPUT}" -name "*.mp4" | wc -l)
-echo "[Step 4] I2V Done. ${I2V_COUNT} videos. Failed workers: ${FAIL}"
-
-fi  # end I2V check
+I2V_EXPECTED=$(python3 -c "import json; print(len(json.load(open('${VBENCH_I2V_JSON}'))) * ${NUM_SAMPLES})")
+echo "[Step 5] I2V Done. ${I2V_COUNT}/${I2V_EXPECTED} videos. Failed workers: ${FAIL}"
 echo ""
 
-# ===================== STEP 5: Summary =====================
+# ===================== STEP 6: Summary & Cleanup =====================
+echo "[Step 6/6] Cleanup & Summary"
+
+# Remove lock files
+find "${T2V_OUTPUT}" "${I2V_OUTPUT}" -name "*.lock" -delete 2>/dev/null
+# Remove temp worker scripts
+rm -f "${BASE_DIR}/_helios_t2v_worker.py" "${BASE_DIR}/_helios_i2v_worker.py"
+
+echo ""
 echo "=============================================="
 echo " All Done!"
 echo "=============================================="
 echo ""
-echo "T2V videos: ${T2V_OUTPUT}  ($(find "${T2V_OUTPUT}" -name '*.mp4' 2>/dev/null | wc -l) files)"
-echo "I2V videos: ${I2V_OUTPUT}  ($(find "${I2V_OUTPUT}" -name '*.mp4' 2>/dev/null | wc -l) files)"
+echo "T2V: ${T2V_OUTPUT}  ($(find "${T2V_OUTPUT}" -name '*.mp4' 2>/dev/null | wc -l) videos)"
+echo "I2V: ${I2V_OUTPUT}  ($(find "${I2V_OUTPUT}" -name '*.mp4' 2>/dev/null | wc -l) videos)"
 echo ""
-echo "To run VBench evaluation:"
-echo "  source ${CONDA_PATH}/bin/activate ${ENV_NAME}"
+echo "Run VBench T2V evaluation:"
+echo "  source ${VENV_DIR}/bin/activate"
 echo "  torchrun --nproc_per_node=8 ${BASE_DIR}/run_vbench.py --video_dir ${T2V_OUTPUT}"
 echo ""
-echo "Cleanup temp files:"
-echo "  rm -f ${BASE_DIR}/_helios_t2v_worker.py ${BASE_DIR}/_helios_i2v_worker.py"
-echo "  find ${T2V_OUTPUT} ${I2V_OUTPUT} -name '*.lock' -delete"
+echo "Run VBench I2V evaluation:"
+echo "  torchrun --nproc_per_node=8 ${BASE_DIR}/run_vbench.py --video_dir ${I2V_OUTPUT}"

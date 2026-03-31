@@ -1,9 +1,10 @@
 """
-Master script to run all 4 video generation projects in parallel on 4 GPUs.
+Master script to run all 5 video generation projects in parallel on 5 GPUs.
 - GPU 0: FastVideo CausalWan2.2 (8-step)
 - GPU 1: NVlabs rCM (4-step)
 - GPU 2: Krea realtime-video (4-step)
 - GPU 3: LightX2V CausVid (9-step)
+- GPU 4: Helios-Distilled (~6-step pyramid)
 
 All use consistent settings:
 - num_frames = 81
@@ -11,7 +12,7 @@ All use consistent settings:
 - seeds = [0, 1]
 
 Usage:
-    # Run all in parallel (use with conda activate fastvideo first)
+    # Run all in parallel
     python run_all.py
 
     # Run single project
@@ -22,32 +23,39 @@ import os
 import sys
 from pathlib import Path
 
-CONDA_PATH = "/root/FGA/miniconda3"
+BASE_DIR = "/raid/fga/video-gen-related"
+CONDA_PATH = "/home/guian/fga/miniconda3"
 
 SCRIPTS = {
     "fastvideo": {
-        "script": "/root/data/video-gen-related/infer_fastvideo.py",
+        "script": f"{BASE_DIR}/infer_fastvideo.py",
         "gpu": 0,
         "name": "FastVideo (8-step)",
         "env": "fastvideo",
     },
-    # "rcm": {
-    #     "script": "/root/data/video-gen-related/infer_rcm.py",
-    #     "gpu": 1,
-    #     "name": "rCM (4-step)",
-    #     "env": "longlive",  # rcm needs longlive for flash_attn
-    # },
+    "rcm": {
+        "script": f"{BASE_DIR}/infer_rcm.py",
+        "gpu": 1,
+        "name": "rCM (4-step)",
+        "env": "longlive",
+    },
     "krea": {
-        "script": "/root/data/video-gen-related/infer_krea.py",
+        "script": f"{BASE_DIR}/infer_krea.py",
         "gpu": 2,
         "name": "Krea (4-step)",
         "env": "fastvideo",
     },
     "lightx2v": {
-        "script": "/root/data/video-gen-related/infer_lightx2v.py",
+        "script": f"{BASE_DIR}/infer_lightx2v.py",
         "gpu": 3,
         "name": "LightX2V (9-step)",
         "env": "lightx2v",
+    },
+    "helios": {
+        "script": f"{BASE_DIR}/infer_helios.py",
+        "gpu": 4,
+        "name": "Helios-Distilled (~6-step)",
+        "env": "helios",
     },
 }
 
@@ -60,11 +68,11 @@ def run_single(name: str):
     env = config["env"]
 
     print(f"[{config['name']}] Starting on GPU {gpu} with env '{env}'...")
-    log_file = Path(f"/root/data/video-gen-related/outputs/{name}.log")
+    log_file = Path(f"{BASE_DIR}/outputs/{name}.log")
     log_file.parent.mkdir(parents=True, exist_ok=True)
 
     # Use bash to activate conda and run script
-    cmd = f"source {CONDA_PATH}/bin/activate {env} && CUDA_VISIBLE_DEVICES={gpu} python {script}"
+    cmd = f"source {CONDA_PATH}/bin/activate {env} && CC=/usr/bin/gcc CUDA_VISIBLE_DEVICES={gpu} python {script}"
 
     with open(log_file, "w") as f:
         proc = subprocess.Popen(
@@ -76,7 +84,7 @@ def run_single(name: str):
 
 
 def run_all():
-    """Run all 4 projects in parallel"""
+    """Run all 5 projects in parallel"""
     processes = []
 
     for name in SCRIPTS:
