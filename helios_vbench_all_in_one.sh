@@ -49,10 +49,10 @@ source "${VENV_DIR}/bin/activate"
 
 echo "  -> Installing packages..."
 pip install -q --upgrade pip
-pip install -q torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu126 2>/dev/null || true
-pip install -q "git+https://github.com/huggingface/diffusers.git" 2>/dev/null || true
-pip install -q transformers accelerate safetensors einops ftfy imageio imageio-ffmpeg 2>/dev/null || true
-pip install -q vbench gdown huggingface-hub 2>/dev/null || true
+pip install -q torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu126 2>&1 | tail -3
+pip install -q "git+https://github.com/huggingface/diffusers.git" 2>&1 | tail -3
+pip install -q transformers accelerate safetensors einops ftfy imageio imageio-ffmpeg 2>&1 | tail -3
+pip install -q vbench gdown huggingface-hub 2>&1 | tail -3
 
 echo "  -> Verifying..."
 python -c "from diffusers import HeliosPyramidPipeline; print('  -> diffusers OK')"
