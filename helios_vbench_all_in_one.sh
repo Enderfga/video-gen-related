@@ -48,19 +48,21 @@ fi
 source "${VENV_DIR}/bin/activate"
 
 echo "  -> Installing packages..."
-pip install -q --upgrade pip
+pip install -q --upgrade pip setuptools wheel
 
-# Install Rust if needed (required by tokenizers)
-if ! command -v rustc &> /dev/null; then
-    echo "  -> Installing Rust (needed by tokenizers)..."
+# Ensure Rust is available (needed by tokenizers if no prebuilt wheel)
+if [ -f "$HOME/.cargo/env" ]; then
+    source "$HOME/.cargo/env"
+elif ! command -v rustc &> /dev/null; then
+    echo "  -> Installing Rust..."
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     source "$HOME/.cargo/env"
 fi
+export PATH="$HOME/.cargo/bin:$PATH"
 
 pip install -q torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu126 2>&1 | tail -3
-pip install -q tokenizers 2>&1 | tail -3
 pip install -q "git+https://github.com/huggingface/diffusers.git" 2>&1 | tail -3
-pip install -q transformers accelerate safetensors einops ftfy imageio imageio-ffmpeg 2>&1 | tail -3
+pip install -q transformers==4.33.2 tokenizers accelerate safetensors einops ftfy imageio imageio-ffmpeg 2>&1 | tail -3
 pip install -q vbench gdown huggingface-hub 2>&1 | tail -3
 
 echo "  -> Verifying..."
