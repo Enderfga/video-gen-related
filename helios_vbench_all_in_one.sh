@@ -40,25 +40,38 @@ echo ""
 # ===================== STEP 1: Python venv =====================
 echo "[Step 1/6] Setting up Python virtual environment..."
 
-if [ ! -f "${VENV_DIR}/bin/python" ]; then
-    echo "  -> Creating venv at ${VENV_DIR}..."
-    python3 -m venv "${VENV_DIR}"
+# Use conda if available, otherwise venv. Conda gives us controlled Python version.
+if command -v conda &> /dev/null; then
+    echo "  -> Using conda (found at $(conda info --base))"
+    if ! conda env list | grep -q "^${ENV_NAME} "; then
+        conda create -n ${ENV_NAME} python=3.11 -y
+    fi
+    eval "$(conda shell.bash hook)"
+    conda activate ${ENV_NAME}
+else
+    if [ ! -f "${VENV_DIR}/bin/python" ]; then
+        echo "  -> Creating venv at ${VENV_DIR}..."
+        python3 -m venv "${VENV_DIR}"
+    fi
+    source "${VENV_DIR}/bin/activate"
 fi
 
-source "${VENV_DIR}/bin/activate"
+echo "  -> Python: $(python --version)"
+
+# Unset PIP_CONSTRAINT which can break installs
+unset PIP_CONSTRAINT
 
 echo "  -> Installing packages..."
 pip install -q --upgrade pip setuptools wheel
 
 # Ensure Rust is available (needed by tokenizers if no prebuilt wheel)
-if [ -f "$HOME/.cargo/env" ]; then
-    source "$HOME/.cargo/env"
-elif ! command -v rustc &> /dev/null; then
+if [ -f "$HOME/.cargo/env" ]; then source "$HOME/.cargo/env"; fi
+export PATH="$HOME/.cargo/bin:$PATH"
+if ! command -v rustc &> /dev/null; then
     echo "  -> Installing Rust..."
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     source "$HOME/.cargo/env"
 fi
-export PATH="$HOME/.cargo/bin:$PATH"
 
 pip install -q torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu126 2>&1 | tail -3
 pip install -q "git+https://github.com/huggingface/diffusers.git" 2>&1 | tail -3
