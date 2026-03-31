@@ -81,10 +81,16 @@ if ! command -v rustc &> /dev/null; then
     source "$HOME/.cargo/env"
 fi
 
+# NOTE: If env already created, skip to Step 2 by commenting out the pip lines below.
+# $PIP install ...  lines can be skipped on re-run if packages are already installed.
+
 $PIP install -q torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu126 2>&1 | tail -3
 $PIP install -q "git+https://github.com/huggingface/diffusers.git" 2>&1 | tail -3
-$PIP install -q transformers==4.33.2 tokenizers accelerate safetensors einops ftfy imageio imageio-ffmpeg 2>&1 | tail -3
-$PIP install -q vbench gdown huggingface-hub 2>&1 | tail -3
+$PIP install -q transformers accelerate safetensors einops ftfy imageio imageio-ffmpeg tokenizers 2>&1 | tail -3
+# vbench pins old transformers, install it without deps then fix
+$PIP install -q --no-deps vbench 2>&1 | tail -3
+$PIP install -q gdown huggingface-hub pyiqa decord opencv-python scipy scikit-learn scikit-image 2>&1 | tail -3
+$PIP install -q openai-clip timm easydict omegaconf 2>&1 | tail -3
 
 echo "  -> Verifying..."
 $PY -c "from diffusers import HeliosPyramidPipeline; print('  -> diffusers OK')"
