@@ -40,29 +40,37 @@ echo ""
 # ===================== STEP 1: Python venv =====================
 echo "[Step 1/6] Setting up Python virtual environment..."
 
-# Use conda if available, otherwise venv. Conda gives us controlled Python version.
-if command -v conda &> /dev/null; then
-    echo "  -> Using conda (found at $(conda info --base))"
-    if ! conda env list | grep -q "^${ENV_NAME} "; then
-        conda create -n ${ENV_NAME} python=3.11 -y
+# Setup Python environment with conda (need Python 3.11 for tokenizers wheels)
+CONDA_BASE="$(conda info --base 2>/dev/null || echo "")"
+
+if [ -n "${CONDA_BASE}" ]; then
+    echo "  -> Using conda at ${CONDA_BASE}"
+    source "${CONDA_BASE}/etc/profile.d/conda.sh"
+
+    if ! conda env list | grep -q "^helios "; then
+        echo "  -> Creating conda env 'helios' with Python 3.11..."
+        conda create -n helios python=3.11 -y
     fi
-    eval "$(conda shell.bash hook)"
-    conda activate ${ENV_NAME}
+    conda activate helios
+    PY="$(conda run -n helios which python)"
+    PIP="$(conda run -n helios which pip)"
 else
+    echo "  -> No conda found, using venv..."
     if [ ! -f "${VENV_DIR}/bin/python" ]; then
-        echo "  -> Creating venv at ${VENV_DIR}..."
         python3 -m venv "${VENV_DIR}"
     fi
     source "${VENV_DIR}/bin/activate"
+    PY="python"
+    PIP="pip"
 fi
 
-echo "  -> Python: $(python --version)"
+echo "  -> Python: $($PY --version)"
 
 # Unset PIP_CONSTRAINT which can break installs
 unset PIP_CONSTRAINT
 
 echo "  -> Installing packages..."
-pip install -q --upgrade pip setuptools wheel
+$PIP install -q --upgrade pip setuptools wheel
 
 # Ensure Rust is available (needed by tokenizers if no prebuilt wheel)
 if [ -f "$HOME/.cargo/env" ]; then source "$HOME/.cargo/env"; fi
@@ -73,14 +81,14 @@ if ! command -v rustc &> /dev/null; then
     source "$HOME/.cargo/env"
 fi
 
-pip install -q torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu126 2>&1 | tail -3
-pip install -q "git+https://github.com/huggingface/diffusers.git" 2>&1 | tail -3
-pip install -q transformers==4.33.2 tokenizers accelerate safetensors einops ftfy imageio imageio-ffmpeg 2>&1 | tail -3
-pip install -q vbench gdown huggingface-hub 2>&1 | tail -3
+$PIP install -q torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu126 2>&1 | tail -3
+$PIP install -q "git+https://github.com/huggingface/diffusers.git" 2>&1 | tail -3
+$PIP install -q transformers==4.33.2 tokenizers accelerate safetensors einops ftfy imageio imageio-ffmpeg 2>&1 | tail -3
+$PIP install -q vbench gdown huggingface-hub 2>&1 | tail -3
 
 echo "  -> Verifying..."
-python -c "from diffusers import HeliosPyramidPipeline; print('  -> diffusers OK')"
-python -c "import vbench; print('  -> vbench OK')"
+$PY -c "from diffusers import HeliosPyramidPipeline; print('  -> diffusers OK')"
+$PY -c "import vbench; print('  -> vbench OK')"
 echo "[Step 1] Done."
 echo ""
 
@@ -105,14 +113,14 @@ if [ ! -f "${VBENCH_T2V_JSON}" ]; then
     echo "  -> ERROR: ${VBENCH_T2V_JSON} not found!"
     exit 1
 fi
-echo "  -> T2V json: OK ($(python3 -c "import json; print(len(json.load(open('${VBENCH_T2V_JSON}'))))" ) prompts)"
+echo "  -> T2V json: OK ($($PY -c "import json; print(len(json.load(open('${VBENCH_T2V_JSON}'))))" ) prompts)"
 
 # I2V json should be in repo
 if [ ! -f "${VBENCH_I2V_JSON}" ]; then
     echo "  -> ERROR: ${VBENCH_I2V_JSON} not found!"
     exit 1
 fi
-echo "  -> I2V json: OK ($(python3 -c "import json; print(len(json.load(open('${VBENCH_I2V_JSON}'))))" ) prompts)"
+echo "  -> I2V json: OK ($($PY -c "import json; print(len(json.load(open('${VBENCH_I2V_JSON}'))))" ) prompts)"
 
 # Download I2V images if not present
 if [ -d "${I2V_IMAGE_DIR}" ] && [ "$(ls -A ${I2V_IMAGE_DIR} 2>/dev/null)" ]; then
@@ -238,7 +246,7 @@ WORKER_EOF
 echo "  -> Launching ${NUM_GPUS} T2V workers..."
 PIDS=()
 for gpu_id in $(seq 0 $((NUM_GPUS - 1))); do
-    CUDA_VISIBLE_DEVICES=${gpu_id} python "${BASE_DIR}/_helios_t2v_worker.py" \
+    CUDA_VISIBLE_DEVICES=${gpu_id} $PY "${BASE_DIR}/_helios_t2v_worker.py" \
         --worker_id ${gpu_id} --num_workers ${NUM_GPUS} \
         --model_dir "${MODEL_DIR}" --vbench_json "${VBENCH_T2V_JSON}" \
         --output_dir "${T2V_OUTPUT}" --num_samples ${NUM_SAMPLES} \
@@ -252,7 +260,7 @@ FAIL=0
 for pid in "${PIDS[@]}"; do wait $pid || FAIL=$((FAIL + 1)); done
 
 T2V_COUNT=$(find "${T2V_OUTPUT}" -name "*.mp4" | wc -l)
-T2V_EXPECTED=$(python3 -c "import json; print(len(json.load(open('${VBENCH_T2V_JSON}'))) * ${NUM_SAMPLES})")
+T2V_EXPECTED=$($PY -c "import json; print(len(json.load(open('${VBENCH_T2V_JSON}'))) * ${NUM_SAMPLES})")
 echo "[Step 4] T2V Done. ${T2V_COUNT}/${T2V_EXPECTED} videos. Failed workers: ${FAIL}"
 echo ""
 
@@ -364,7 +372,7 @@ WORKER_EOF
 echo "  -> Launching ${NUM_GPUS} I2V workers..."
 PIDS=()
 for gpu_id in $(seq 0 $((NUM_GPUS - 1))); do
-    CUDA_VISIBLE_DEVICES=${gpu_id} python "${BASE_DIR}/_helios_i2v_worker.py" \
+    CUDA_VISIBLE_DEVICES=${gpu_id} $PY "${BASE_DIR}/_helios_i2v_worker.py" \
         --worker_id ${gpu_id} --num_workers ${NUM_GPUS} \
         --model_dir "${MODEL_DIR}" --vbench_json "${VBENCH_I2V_JSON}" \
         --output_dir "${I2V_OUTPUT}" --num_samples ${NUM_SAMPLES} \
@@ -378,7 +386,7 @@ FAIL=0
 for pid in "${PIDS[@]}"; do wait $pid || FAIL=$((FAIL + 1)); done
 
 I2V_COUNT=$(find "${I2V_OUTPUT}" -name "*.mp4" | wc -l)
-I2V_EXPECTED=$(python3 -c "import json; print(len(json.load(open('${VBENCH_I2V_JSON}'))) * ${NUM_SAMPLES})")
+I2V_EXPECTED=$($PY -c "import json; print(len(json.load(open('${VBENCH_I2V_JSON}'))) * ${NUM_SAMPLES})")
 echo "[Step 5] I2V Done. ${I2V_COUNT}/${I2V_EXPECTED} videos. Failed workers: ${FAIL}"
 echo ""
 
